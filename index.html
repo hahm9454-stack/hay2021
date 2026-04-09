@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>크루즈 경비 정산</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -103,6 +104,19 @@
             font-size: 0.8em;
         }
         .btn-danger:hover { background: #e55555; }
+        .btn-photo {
+            background: #43a047;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-photo:hover { background: #388e3c; }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #555;
+        }
+        .btn-secondary:hover { background: #ccc; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -120,6 +134,7 @@
             padding: 10px 8px;
             border-bottom: 1px solid #f0f0f0;
             font-size: 0.9em;
+            vertical-align: middle;
         }
         tr:hover { background: #fafbff; }
         .badge {
@@ -201,15 +216,212 @@
             color: #aaa;
             font-size: 0.9em;
         }
-        .paid-by-tag {
-            font-size: 0.75em;
+
+        /* Photo upload styles */
+        .photo-upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        .photo-upload-area:hover,
+        .photo-upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .photo-upload-area input[type="file"] {
+            display: none;
+        }
+        .photo-upload-area .upload-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+        .photo-upload-area .upload-text {
+            font-size: 0.9em;
             color: #888;
         }
+        .photo-upload-area .upload-text strong {
+            color: #667eea;
+        }
+        .photo-preview {
+            display: none;
+            margin: 12px 0;
+            position: relative;
+        }
+        .photo-preview img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        .photo-preview .remove-photo {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            font-size: 1em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ocr-status {
+            display: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-size: 0.85em;
+        }
+        .ocr-status.loading {
+            display: block;
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .ocr-status.success {
+            display: block;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .ocr-status.error {
+            display: block;
+            background: #fce4ec;
+            color: #c62828;
+        }
+        .ocr-progress {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .ocr-progress-bar {
+            height: 100%;
+            background: #667eea;
+            border-radius: 2px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+        .thumbnail {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            transition: transform 0.2s;
+        }
+        .thumbnail:hover {
+            transform: scale(1.15);
+        }
+        .ocr-amounts {
+            display: none;
+            background: #f0f4ff;
+            border: 1px solid #667eea40;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+        }
+        .ocr-amounts .ocr-title {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .ocr-amount-btn {
+            display: inline-block;
+            padding: 4px 12px;
+            margin: 3px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 20px;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ocr-amount-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Modal for viewing full receipt */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-overlay img {
+            max-width: 95%;
+            max-height: 95vh;
+            border-radius: 8px;
+        }
+        .modal-close {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.3em;
+            cursor: pointer;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .input-mode-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #667eea;
+        }
+        .input-mode-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: white;
+            color: #667eea;
+        }
+        .input-mode-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .input-section { display: none; }
+        .input-section.active { display: block; }
+
         @media (max-width: 600px) {
             .form-row { flex-direction: column; }
             .form-group { min-width: 100%; }
             table { font-size: 0.85em; }
             th, td { padding: 8px 4px; }
+            .thumbnail { width: 32px; height: 32px; }
         }
     </style>
 </head>
@@ -235,6 +447,44 @@
         <!-- 경비 입력 -->
         <div class="card">
             <h2>경비 입력</h2>
+
+            <!-- 입력 방식 탭 -->
+            <div class="input-mode-tabs">
+                <button class="input-mode-tab active" onclick="switchInputMode('manual')">직접 입력</button>
+                <button class="input-mode-tab" onclick="switchInputMode('photo')">사진으로 입력</button>
+            </div>
+
+            <!-- 사진 입력 섹션 -->
+            <div id="photoSection" class="input-section">
+                <div class="photo-upload-area" id="dropZone" onclick="document.getElementById('photoInput').click()">
+                    <input type="file" id="photoInput" accept="image/*" capture="environment">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">
+                        <strong>영수증 사진 촬영</strong> 또는 갤러리에서 선택<br>
+                        <span style="font-size:0.85em; color:#aaa;">탭하거나 파일을 드래그하세요</span>
+                    </div>
+                </div>
+                <div class="photo-preview" id="photoPreview">
+                    <button class="remove-photo" onclick="removePhoto()">✕</button>
+                    <img id="previewImg" src="" alt="영수증 미리보기">
+                </div>
+                <div class="ocr-status" id="ocrStatus">
+                    <span id="ocrStatusText">영수증 분석 중...</span>
+                    <div class="ocr-progress">
+                        <div class="ocr-progress-bar" id="ocrProgressBar"></div>
+                    </div>
+                </div>
+                <div class="ocr-amounts" id="ocrAmounts">
+                    <div class="ocr-title">인식된 금액 (클릭하면 자동 입력):</div>
+                    <div id="ocrAmountList"></div>
+                </div>
+            </div>
+
+            <!-- 수동 입력 섹션 (항상 표시) -->
+            <div id="manualSection" class="input-section active">
+            </div>
+
+            <!-- 공통 입력 필드 -->
             <div class="form-row">
                 <div class="form-group">
                     <label>항목</label>
@@ -297,22 +547,229 @@
             </div>
 
             <div id="settlementResult"></div>
-
-            <!-- 상세 내역 -->
             <div id="detailBreakdown" style="margin-top: 20px;"></div>
         </div>
     </div>
 
-    <script>
-        let expenses = JSON.parse(localStorage.getItem('cruise_expenses') || '[]');
+    <!-- 영수증 확대 모달 -->
+    <div class="modal-overlay" id="imageModal" onclick="closeModal()">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        <img id="modalImg" src="" alt="영수증">
+    </div>
 
+    <script>
+        // === IndexedDB for image storage ===
+        const DB_NAME = 'cruise_expense_db';
+        const STORE_NAME = 'receipt_images';
+        let db = null;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = (e) => {
+                    e.target.result.createObjectStore(STORE_NAME);
+                };
+                req.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        function saveImage(id, dataUrl) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).put(dataUrl, String(id));
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e);
+            });
+        }
+
+        function getImage(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).get(String(id));
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        function deleteImage(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).delete(String(id));
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e);
+            });
+        }
+
+        // === State ===
+        let expenses = JSON.parse(localStorage.getItem('cruise_expenses') || '[]');
+        let currentPhotoData = null; // base64 of current photo being added
+
+        // === Input mode switching ===
+        function switchInputMode(mode) {
+            document.querySelectorAll('.input-mode-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.input-section').forEach(s => s.classList.remove('active'));
+            if (mode === 'photo') {
+                document.querySelectorAll('.input-mode-tab')[1].classList.add('active');
+                document.getElementById('photoSection').classList.add('active');
+            } else {
+                document.querySelectorAll('.input-mode-tab')[0].classList.add('active');
+                document.getElementById('manualSection').classList.add('active');
+            }
+        }
+
+        // === Photo handling ===
+        const photoInput = document.getElementById('photoInput');
+        const dropZone = document.getElementById('dropZone');
+
+        photoInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleImageFile(e.target.files[0]);
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleImageFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function handleImageFile(file) {
+            if (!file.type.startsWith('image/')) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Resize image to save storage
+                resizeImage(e.target.result, 1200, (resized) => {
+                    currentPhotoData = resized;
+                    document.getElementById('previewImg').src = resized;
+                    document.getElementById('photoPreview').style.display = 'block';
+                    dropZone.style.display = 'none';
+                    runOCR(resized);
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resizeImage(dataUrl, maxWidth, callback) {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w > maxWidth) {
+                    h = Math.round(h * maxWidth / w);
+                    w = maxWidth;
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                callback(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.src = dataUrl;
+        }
+
+        function removePhoto() {
+            currentPhotoData = null;
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('ocrStatus').className = 'ocr-status';
+            document.getElementById('ocrAmounts').style.display = 'none';
+            dropZone.style.display = '';
+            photoInput.value = '';
+        }
+
+        // === OCR with Tesseract.js ===
+        async function runOCR(imageData) {
+            const statusEl = document.getElementById('ocrStatus');
+            const statusText = document.getElementById('ocrStatusText');
+            const progressBar = document.getElementById('ocrProgressBar');
+            const amountsEl = document.getElementById('ocrAmounts');
+            const amountList = document.getElementById('ocrAmountList');
+
+            statusEl.className = 'ocr-status loading';
+            statusText.textContent = '영수증 분석 중...';
+            progressBar.style.width = '0%';
+            amountsEl.style.display = 'none';
+
+            try {
+                const result = await Tesseract.recognize(imageData, 'eng+kor', {
+                    logger: (m) => {
+                        if (m.status === 'recognizing text') {
+                            progressBar.style.width = Math.round(m.progress * 100) + '%';
+                        }
+                    }
+                });
+
+                const text = result.data.text;
+
+                // Extract dollar amounts, various formats
+                const amountPatterns = [
+                    /\$\s?([\d,]+\.?\d{0,2})/g,           // $12.34 or $1,234.56
+                    /(?:total|amount|합계|금액|계)\s*:?\s*\$?\s*([\d,]+\.?\d{0,2})/gi,
+                    /(\d{1,3}(?:,\d{3})*\.\d{2})/g,       // 1,234.56 format
+                ];
+
+                const amounts = new Set();
+                for (const pattern of amountPatterns) {
+                    let match;
+                    while ((match = pattern.exec(text)) !== null) {
+                        const val = parseFloat(match[1].replace(/,/g, ''));
+                        if (val > 0 && val < 100000) {
+                            amounts.add(val);
+                        }
+                    }
+                }
+
+                const sortedAmounts = [...amounts].sort((a, b) => b - a);
+
+                if (sortedAmounts.length > 0) {
+                    statusEl.className = 'ocr-status success';
+                    statusText.textContent = `${sortedAmounts.length}개 금액 인식 완료! 아래에서 선택하세요.`;
+                    progressBar.style.width = '100%';
+
+                    amountList.innerHTML = '';
+                    sortedAmounts.forEach(amt => {
+                        const btn = document.createElement('button');
+                        btn.className = 'ocr-amount-btn';
+                        btn.textContent = `$${amt.toFixed(2)}`;
+                        btn.onclick = () => {
+                            document.getElementById('amount').value = amt.toFixed(2);
+                            document.getElementById('desc').focus();
+                        };
+                        amountList.appendChild(btn);
+                    });
+                    amountsEl.style.display = 'block';
+                } else {
+                    statusEl.className = 'ocr-status error';
+                    statusText.textContent = '금액을 자동 인식하지 못했어요. 직접 입력해주세요.';
+                    progressBar.style.width = '100%';
+                }
+            } catch (err) {
+                statusEl.className = 'ocr-status error';
+                statusText.textContent = 'OCR 처리 중 오류가 발생했어요. 금액을 직접 입력해주세요.';
+                progressBar.style.width = '100%';
+            }
+        }
+
+        // === Expense CRUD ===
         function saveAndRender() {
             localStorage.setItem('cruise_expenses', JSON.stringify(expenses));
             renderExpenses();
             calculateSettlement();
         }
 
-        function addExpense() {
+        async function addExpense() {
             const desc = document.getElementById('desc').value.trim();
             const amount = parseFloat(document.getElementById('amount').value);
             const category = document.getElementById('category').value;
@@ -323,13 +780,28 @@
                 return;
             }
 
-            expenses.push({ id: Date.now(), desc, amount, category, paidBy });
+            const id = Date.now();
+            const hasPhoto = !!currentPhotoData;
+
+            expenses.push({ id, desc, amount, category, paidBy, hasPhoto });
+
+            // Save photo to IndexedDB if present
+            if (currentPhotoData) {
+                await saveImage(id, currentPhotoData);
+                removePhoto();
+                switchInputMode('manual');
+            }
+
             document.getElementById('desc').value = '';
             document.getElementById('amount').value = '';
             saveAndRender();
         }
 
-        function deleteExpense(id) {
+        async function deleteExpense(id) {
+            const exp = expenses.find(e => e.id === id);
+            if (exp && exp.hasPhoto) {
+                await deleteImage(id);
+            }
             expenses = expenses.filter(e => e.id !== id);
             saveAndRender();
         }
@@ -349,92 +821,117 @@
             return { me: '나', sister: '언니', bil: '형부' }[p] || p;
         }
 
-        function renderExpenses() {
+        async function renderExpenses() {
             const el = document.getElementById('expenseList');
             if (expenses.length === 0) {
                 el.innerHTML = '<div class="empty-state">아직 입력된 경비가 없습니다</div>';
                 return;
             }
             let html = `<table>
-                <tr><th>항목</th><th>금액</th><th>분류</th><th>결제자</th><th></th></tr>`;
-            expenses.forEach(e => {
+                <tr><th></th><th>항목</th><th>금액</th><th>분류</th><th>결제자</th><th></th></tr>`;
+            for (const e of expenses) {
+                let thumbHtml = '';
+                if (e.hasPhoto) {
+                    thumbHtml = `<img class="thumbnail" data-id="${e.id}" src="" alt="영수증" onclick="viewReceipt(${e.id})">`;
+                }
                 html += `<tr>
-                    <td>${e.desc}</td>
+                    <td>${thumbHtml}</td>
+                    <td>${escapeHtml(e.desc)}</td>
                     <td>$${e.amount.toFixed(2)}</td>
                     <td>${getCategoryBadge(e.category)}</td>
                     <td>${getPaidByLabel(e.paidBy)}</td>
                     <td><button class="btn btn-danger" onclick="deleteExpense(${e.id})">삭제</button></td>
                 </tr>`;
-            });
+            }
             html += '</table>';
             el.innerHTML = html;
+
+            // Load thumbnails from IndexedDB
+            const thumbs = el.querySelectorAll('.thumbnail');
+            for (const thumb of thumbs) {
+                const id = thumb.dataset.id;
+                const imgData = await getImage(id);
+                if (imgData) thumb.src = imgData;
+            }
         }
 
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function viewReceipt(id) {
+            const imgData = await getImage(id);
+            if (imgData) {
+                document.getElementById('modalImg').src = imgData;
+                document.getElementById('imageModal').classList.add('active');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        // ESC key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
         function calculateSettlement() {
-            // 각 사람이 결제한 총액
             let paidByMe = 0, paidBySister = 0, paidByBil = 0;
-            // 각 사람이 부담해야 할 총액
             let owedByMe = 0, owedBySister = 0, owedByBil = 0;
             let totalAll = 0;
 
             expenses.forEach(e => {
                 totalAll += e.amount;
 
-                // 결제 기록
                 if (e.paidBy === 'me') paidByMe += e.amount;
                 else if (e.paidBy === 'sister') paidBySister += e.amount;
                 else if (e.paidBy === 'bil') paidByBil += e.amount;
 
                 switch (e.category) {
                     case 'shared':
-                        // 6명 전체 비용: 3등분, 부모님+이모 몫(3/6)은 언니 추가
                         const perPerson6 = e.amount / 6;
-                        owedByMe += perPerson6;         // 내 1인분
-                        owedBySister += perPerson6 * 4;  // 언니 본인 + 부모님2 + 이모1
-                        owedByBil += perPerson6;         // 형부 1인분
+                        owedByMe += perPerson6;
+                        owedBySister += perPerson6 * 4;
+                        owedByBil += perPerson6;
                         break;
                     case 'shared3':
-                        // 3인 공동 (언니+형부+나)
                         const perPerson3 = e.amount / 3;
                         owedByMe += perPerson3;
                         owedBySister += perPerson3;
                         owedByBil += perPerson3;
                         break;
                     case 'parents':
-                        // 부모님+이모 전용 → 전액 언니 부담
                         owedBySister += e.amount;
                         break;
                     case 'sister':
-                        // 언니가족 전용 → 언니+형부가 반반
                         owedBySister += e.amount / 2;
                         owedByBil += e.amount / 2;
                         break;
                     case 'me':
-                        // 내 개인 → 내가 전액
                         owedByMe += e.amount;
                         break;
                 }
             });
 
-            // 각 사람의 잔액 (+ 는 받을 돈, - 는 줄 돈)
             const balanceMe = paidByMe - owedByMe;
             const balanceSister = paidBySister - owedBySister;
             const balanceBil = paidByBil - owedByBil;
 
-            // 화면 업데이트
             document.getElementById('totalAll').textContent = `$${totalAll.toFixed(2)}`;
             document.getElementById('myTotal').textContent = `$${owedByMe.toFixed(2)}`;
             document.getElementById('sisterTotal').textContent = `$${(owedBySister + owedByBil).toFixed(2)}`;
 
-            // 정산 계산 (단순화: 마이너스인 사람이 플러스인 사람에게 송금)
             const people = [
                 { name: '나', balance: balanceMe },
                 { name: '언니', balance: balanceSister },
                 { name: '형부', balance: balanceBil }
             ];
 
-            const debtors = people.filter(p => p.balance < -0.005).map(p => ({...p, balance: p.balance}));
-            const creditors = people.filter(p => p.balance > 0.005).map(p => ({...p, balance: p.balance}));
+            const debtors = people.filter(p => p.balance < -0.005).map(p => ({...p}));
+            const creditors = people.filter(p => p.balance > 0.005).map(p => ({...p}));
 
             let settlements = [];
             let di = 0, ci = 0;
@@ -444,11 +941,7 @@
             while (di < d.length && ci < c.length) {
                 const transfer = Math.min(-d[di].balance, c[ci].balance);
                 if (transfer > 0.005) {
-                    settlements.push({
-                        from: d[di].name,
-                        to: c[ci].name,
-                        amount: transfer
-                    });
+                    settlements.push({ from: d[di].name, to: c[ci].name, amount: transfer });
                 }
                 d[di].balance += transfer;
                 c[ci].balance -= transfer;
@@ -476,7 +969,6 @@
                 resultEl.innerHTML = html;
             }
 
-            // 상세 내역
             const detailEl = document.getElementById('detailBreakdown');
             if (expenses.length > 0) {
                 detailEl.innerHTML = `
@@ -491,10 +983,11 @@
             }
         }
 
-        // 초기 렌더링
-        saveAndRender();
+        // === Init ===
+        openDB().then(() => {
+            saveAndRender();
+        });
 
-        // Enter 키로 추가
         document.getElementById('amount').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') addExpense();
         });
