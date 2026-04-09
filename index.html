@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>크루즈 경비 정산</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 1.8em;
+        }
+        .subtitle {
+            color: rgba(255,255,255,0.85);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 0.95em;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .card h2 {
+            font-size: 1.15em;
+            margin-bottom: 16px;
+            color: #4a4a6a;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 16px;
+            font-size: 0.9em;
+            line-height: 1.7;
+        }
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 120px;
+        }
+        .form-group label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .form-group input, .form-group select {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover { background: #5568d4; }
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+        .btn-danger:hover { background: #e55555; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        th {
+            background: #f8f9ff;
+            padding: 10px 8px;
+            text-align: left;
+            font-size: 0.8em;
+            color: #666;
+            border-bottom: 2px solid #eee;
+        }
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9em;
+        }
+        tr:hover { background: #fafbff; }
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+        .badge-shared { background: #e8f5e9; color: #2e7d32; }
+        .badge-family { background: #fff3e0; color: #e65100; }
+        .badge-personal { background: #e3f2fd; color: #1565c0; }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .summary-item {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .summary-item .label {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .summary-item .amount {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #4a4a6a;
+        }
+        .settlement-box {
+            background: linear-gradient(135deg, #667eea15, #764ba215);
+            border: 2px solid #667eea40;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 16px;
+            text-align: center;
+        }
+        .settlement-box .title {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .settlement-box .result {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #4a4a6a;
+        }
+        .settlement-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin: 12px 0;
+            font-size: 1.1em;
+        }
+        .settlement-arrow .person {
+            font-weight: 700;
+            color: #4a4a6a;
+        }
+        .settlement-arrow .arrow {
+            color: #667eea;
+            font-size: 1.5em;
+        }
+        .settlement-arrow .transfer-amount {
+            background: #667eea;
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .paid-by-tag {
+            font-size: 0.75em;
+            color: #888;
+        }
+        @media (max-width: 600px) {
+            .form-row { flex-direction: column; }
+            .form-group { min-width: 100%; }
+            table { font-size: 0.85em; }
+            th, td { padding: 8px 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>크루즈 경비 정산</h1>
+        <p class="subtitle">2025.6.1 가족 크루즈 여행</p>
+
+        <!-- 정산 규칙 안내 -->
+        <div class="card">
+            <h2>정산 규칙</h2>
+            <div class="info-box">
+                <strong>참여자:</strong> 부모님(2), 언니, 형부, 나, 이모 — 총 6명<br>
+                <strong>경비 분담자:</strong> 언니, 형부, 나 — 3명<br>
+                <strong>부모님 + 이모 경비:</strong> 언니가 부담<br><br>
+                <strong>정산 방식:</strong><br>
+                • <span class="badge badge-shared">공동경비</span> 6명 전체 비용 → 3등분 후, 부모님+이모 몫(3인분)은 언니 추가 부담<br>
+                • <span class="badge badge-family">언니가족</span> 언니+형부만의 비용 → 정산 제외<br>
+                • <span class="badge badge-personal">내 개인</span> 나만의 비용 → 정산 제외
+            </div>
+        </div>
+
+        <!-- 경비 입력 -->
+        <div class="card">
+            <h2>경비 입력</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>항목</label>
+                    <input type="text" id="desc" placeholder="예: 크루즈 티켓">
+                </div>
+                <div class="form-group">
+                    <label>금액 ($)</label>
+                    <input type="number" id="amount" placeholder="0" min="0" step="0.01">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>분류</label>
+                    <select id="category">
+                        <option value="shared">공동경비 (6명 전체)</option>
+                        <option value="shared3">3인 공동 (언니+형부+나)</option>
+                        <option value="parents">부모님+이모 전용</option>
+                        <option value="sister">언니가족 전용</option>
+                        <option value="me">내 개인</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>결제자</label>
+                    <select id="paidBy">
+                        <option value="me">내가 결제</option>
+                        <option value="sister">언니가 결제</option>
+                        <option value="bil">형부가 결제</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row" style="justify-content: flex-end;">
+                <button class="btn btn-primary" onclick="addExpense()">+ 추가</button>
+            </div>
+        </div>
+
+        <!-- 경비 목록 -->
+        <div class="card">
+            <h2>경비 목록</h2>
+            <div id="expenseList">
+                <div class="empty-state">아직 입력된 경비가 없습니다</div>
+            </div>
+        </div>
+
+        <!-- 정산 결과 -->
+        <div class="card">
+            <h2>정산 결과</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="label">총 경비</div>
+                    <div class="amount" id="totalAll">$0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">내가 낼 총액</div>
+                    <div class="amount" id="myTotal">$0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="label">언니네가 낼 총액</div>
+                    <div class="amount" id="sisterTotal">$0</div>
+                </div>
+            </div>
+
+            <div id="settlementResult"></div>
+
+            <!-- 상세 내역 -->
+            <div id="detailBreakdown" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let expenses = JSON.parse(localStorage.getItem('cruise_expenses') || '[]');
+
+        function saveAndRender() {
+            localStorage.setItem('cruise_expenses', JSON.stringify(expenses));
+            renderExpenses();
+            calculateSettlement();
+        }
+
+        function addExpense() {
+            const desc = document.getElementById('desc').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const paidBy = document.getElementById('paidBy').value;
+
+            if (!desc || !amount || amount <= 0) {
+                alert('항목과 금액을 입력해주세요.');
+                return;
+            }
+
+            expenses.push({ id: Date.now(), desc, amount, category, paidBy });
+            document.getElementById('desc').value = '';
+            document.getElementById('amount').value = '';
+            saveAndRender();
+        }
+
+        function deleteExpense(id) {
+            expenses = expenses.filter(e => e.id !== id);
+            saveAndRender();
+        }
+
+        function getCategoryBadge(cat) {
+            const map = {
+                shared: '<span class="badge badge-shared">공동(6명)</span>',
+                shared3: '<span class="badge badge-shared">공동(3인)</span>',
+                parents: '<span class="badge badge-family">부모님+이모</span>',
+                sister: '<span class="badge badge-family">언니가족</span>',
+                me: '<span class="badge badge-personal">내 개인</span>'
+            };
+            return map[cat] || cat;
+        }
+
+        function getPaidByLabel(p) {
+            return { me: '나', sister: '언니', bil: '형부' }[p] || p;
+        }
+
+        function renderExpenses() {
+            const el = document.getElementById('expenseList');
+            if (expenses.length === 0) {
+                el.innerHTML = '<div class="empty-state">아직 입력된 경비가 없습니다</div>';
+                return;
+            }
+            let html = `<table>
+                <tr><th>항목</th><th>금액</th><th>분류</th><th>결제자</th><th></th></tr>`;
+            expenses.forEach(e => {
+                html += `<tr>
+                    <td>${e.desc}</td>
+                    <td>$${e.amount.toFixed(2)}</td>
+                    <td>${getCategoryBadge(e.category)}</td>
+                    <td>${getPaidByLabel(e.paidBy)}</td>
+                    <td><button class="btn btn-danger" onclick="deleteExpense(${e.id})">삭제</button></td>
+                </tr>`;
+            });
+            html += '</table>';
+            el.innerHTML = html;
+        }
+
+        function calculateSettlement() {
+            // 각 사람이 결제한 총액
+            let paidByMe = 0, paidBySister = 0, paidByBil = 0;
+            // 각 사람이 부담해야 할 총액
+            let owedByMe = 0, owedBySister = 0, owedByBil = 0;
+            let totalAll = 0;
+
+            expenses.forEach(e => {
+                totalAll += e.amount;
+
+                // 결제 기록
+                if (e.paidBy === 'me') paidByMe += e.amount;
+                else if (e.paidBy === 'sister') paidBySister += e.amount;
+                else if (e.paidBy === 'bil') paidByBil += e.amount;
+
+                switch (e.category) {
+                    case 'shared':
+                        // 6명 전체 비용: 3등분, 부모님+이모 몫(3/6)은 언니 추가
+                        const perPerson6 = e.amount / 6;
+                        owedByMe += perPerson6;         // 내 1인분
+                        owedBySister += perPerson6 * 4;  // 언니 본인 + 부모님2 + 이모1
+                        owedByBil += perPerson6;         // 형부 1인분
+                        break;
+                    case 'shared3':
+                        // 3인 공동 (언니+형부+나)
+                        const perPerson3 = e.amount / 3;
+                        owedByMe += perPerson3;
+                        owedBySister += perPerson3;
+                        owedByBil += perPerson3;
+                        break;
+                    case 'parents':
+                        // 부모님+이모 전용 → 전액 언니 부담
+                        owedBySister += e.amount;
+                        break;
+                    case 'sister':
+                        // 언니가족 전용 → 언니+형부가 반반
+                        owedBySister += e.amount / 2;
+                        owedByBil += e.amount / 2;
+                        break;
+                    case 'me':
+                        // 내 개인 → 내가 전액
+                        owedByMe += e.amount;
+                        break;
+                }
+            });
+
+            // 각 사람의 잔액 (+ 는 받을 돈, - 는 줄 돈)
+            const balanceMe = paidByMe - owedByMe;
+            const balanceSister = paidBySister - owedBySister;
+            const balanceBil = paidByBil - owedByBil;
+
+            // 화면 업데이트
+            document.getElementById('totalAll').textContent = `$${totalAll.toFixed(2)}`;
+            document.getElementById('myTotal').textContent = `$${owedByMe.toFixed(2)}`;
+            document.getElementById('sisterTotal').textContent = `$${(owedBySister + owedByBil).toFixed(2)}`;
+
+            // 정산 계산 (단순화: 마이너스인 사람이 플러스인 사람에게 송금)
+            const people = [
+                { name: '나', balance: balanceMe },
+                { name: '언니', balance: balanceSister },
+                { name: '형부', balance: balanceBil }
+            ];
+
+            const debtors = people.filter(p => p.balance < -0.005).map(p => ({...p, balance: p.balance}));
+            const creditors = people.filter(p => p.balance > 0.005).map(p => ({...p, balance: p.balance}));
+
+            let settlements = [];
+            let di = 0, ci = 0;
+            const d = debtors.map(x => ({...x}));
+            const c = creditors.map(x => ({...x}));
+
+            while (di < d.length && ci < c.length) {
+                const transfer = Math.min(-d[di].balance, c[ci].balance);
+                if (transfer > 0.005) {
+                    settlements.push({
+                        from: d[di].name,
+                        to: c[ci].name,
+                        amount: transfer
+                    });
+                }
+                d[di].balance += transfer;
+                c[ci].balance -= transfer;
+                if (Math.abs(d[di].balance) < 0.005) di++;
+                if (Math.abs(c[ci].balance) < 0.005) ci++;
+            }
+
+            const resultEl = document.getElementById('settlementResult');
+            if (settlements.length === 0) {
+                resultEl.innerHTML = '<div class="settlement-box"><div class="title">정산 필요 없음</div><div class="result">모두 정산 완료!</div></div>';
+            } else {
+                let html = '';
+                settlements.forEach(s => {
+                    html += `<div class="settlement-box">
+                        <div class="title">송금 필요</div>
+                        <div class="settlement-arrow">
+                            <span class="person">${s.from}</span>
+                            <span class="arrow">→</span>
+                            <span class="transfer-amount">$${s.amount.toFixed(2)}</span>
+                            <span class="arrow">→</span>
+                            <span class="person">${s.to}</span>
+                        </div>
+                    </div>`;
+                });
+                resultEl.innerHTML = html;
+            }
+
+            // 상세 내역
+            const detailEl = document.getElementById('detailBreakdown');
+            if (expenses.length > 0) {
+                detailEl.innerHTML = `
+                    <div style="background:#f8f9ff; border-radius:8px; padding:14px; font-size:0.85em; line-height:1.8;">
+                        <strong>상세 내역</strong><br>
+                        나 — 부담액: $${owedByMe.toFixed(2)} | 결제액: $${paidByMe.toFixed(2)} | 잔액: ${balanceMe >= 0 ? '+' : ''}$${balanceMe.toFixed(2)}<br>
+                        언니 — 부담액: $${owedBySister.toFixed(2)} | 결제액: $${paidBySister.toFixed(2)} | 잔액: ${balanceSister >= 0 ? '+' : ''}$${balanceSister.toFixed(2)}<br>
+                        형부 — 부담액: $${owedByBil.toFixed(2)} | 결제액: $${paidByBil.toFixed(2)} | 잔액: ${balanceBil >= 0 ? '+' : ''}$${balanceBil.toFixed(2)}
+                    </div>`;
+            } else {
+                detailEl.innerHTML = '';
+            }
+        }
+
+        // 초기 렌더링
+        saveAndRender();
+
+        // Enter 키로 추가
+        document.getElementById('amount').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addExpense();
+        });
+        document.getElementById('desc').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('amount').focus();
+        });
+    </script>
+</body>
+</html>
